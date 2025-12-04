@@ -59,7 +59,7 @@ const TRANSLATIONS = {
     viewEnd: '视图终点 (s)',
     focusWindow: '聚焦分析窗口',
     resetView: '复位视图',
-    resetLayout: '重置布局 (显示FFT)',
+    resetLayout: '重置布局',
     zoomTip: '提示: 在图表上拖拽可放大',
     toggleSidebar: '侧边栏',
     export: '导出/打印',
@@ -122,7 +122,7 @@ const TRANSLATIONS = {
     viewEnd: 'View End (s)',
     focusWindow: 'Focus Window',
     resetView: 'Reset View',
-    resetLayout: 'Reset Layout (Show FFT)',
+    resetLayout: 'Reset Layout',
     zoomTip: 'Tip: Drag on chart to zoom',
     toggleSidebar: 'Sidebar',
     export: 'Export/Print',
@@ -218,7 +218,7 @@ const App: React.FC = () => {
   // ISO Calculation State
   const [boundaries, setBoundaries] = useState<ElevatorBoundaries | null>(null);
   const [isoStats, setIsoStats] = useState<IsoStats | null>(null);
-  const [showIsoBoundaries, setShowIsoBoundaries] = useState(true);
+  const [showIsoBoundaries, setShowIsoBoundaries] = useState(false);
 
   // DSP State
   const [filterConfig, setFilterConfig] = useState<FilterConfig>({
@@ -1170,6 +1170,17 @@ const App: React.FC = () => {
                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>
                      </button>
                    </div>
+                   
+                   {/* Reset Layout */}
+                   <button 
+                      onClick={handleResetLayout}
+                      className={`p-1.5 rounded border ${theme.border} hover:bg-gray-500/20 ${theme.textPrimary} ml-1`}
+                      title={t.resetLayout}
+                   >
+                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                     </svg>
+                   </button>
                 </div>
               </div>
               
@@ -1302,6 +1313,17 @@ const App: React.FC = () => {
                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>
                      </button>
                    </div>
+
+                   {/* Reset Layout Int */}
+                   <button 
+                      onClick={handleResetLayout}
+                      className={`p-1.5 rounded border ${theme.border} hover:bg-gray-500/20 ${theme.textPrimary} ml-1`}
+                      title={t.resetLayout}
+                   >
+                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                     </svg>
+                   </button>
                 </div>
               </div>
               

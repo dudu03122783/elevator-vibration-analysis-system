@@ -348,7 +348,7 @@ export const calculateLiftBoundaries = (data: ProcessedDataPoint[]): ElevatorBou
 
   // Thresholds
   const motionThreshold = vMax * 0.05; // 5% of Vmax counts as motion
-  const constVelThreshold = vMax * 0.95; // 95% of Vmax counts as constant velocity
+  const constVelThreshold = vMax * 0.95; // 95% of Vmax counts as constant velocity region candidate
 
   let t0 = 0, t1 = 0, t2 = 0, t3 = data[n-1].time;
   
@@ -368,7 +368,7 @@ export const calculateLiftBoundaries = (data: ProcessedDataPoint[]): ElevatorBou
     }
   }
 
-  // Find t1 (Start of Const Vel)
+  // Find t1 (Start of Const Vel candidate)
   for(let i=0; i<n; i++) {
     if (data[i].time > t0 && Math.abs(data[i].vz) > constVelThreshold) {
       t1 = data[i].time;
@@ -376,7 +376,7 @@ export const calculateLiftBoundaries = (data: ProcessedDataPoint[]): ElevatorBou
     }
   }
 
-  // Find t2 (End of Const Vel)
+  // Find t2 (End of Const Vel candidate)
   for(let i=n-1; i>=0; i--) {
     if (data[i].time < t3 && Math.abs(data[i].vz) > constVelThreshold) {
       t2 = data[i].time;
@@ -390,6 +390,20 @@ export const calculateLiftBoundaries = (data: ProcessedDataPoint[]): ElevatorBou
     t2 = t0 + (t3-t0)*0.6;
     return { t0, t1, t2, t3, isValid: false }; // Not a standard curve
   }
+
+  // Optimize t1 and t2 to ensure we are completely inside the constant velocity phase
+  // excluding the acceleration/deceleration transition curves.
+  const duration = t2 - t1;
+  let padding = 0;
+  
+  if (duration > 2.0) {
+      padding = 0.5; // Remove 0.5s from start/end for long runs
+  } else {
+      padding = duration * 0.15; // Remove 15% from start/end for short runs
+  }
+
+  t1 += padding;
+  t2 -= padding;
 
   return { t0, t1, t2, t3, isValid: true };
 };
