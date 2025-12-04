@@ -67,7 +67,7 @@ const TRANSLATIONS = {
     selectCharts: '选择图表',
     selectAll: '全选',
     print: '打印',
-    saveImage: '保存图片',
+    saveImage: '保存全套分析报告',
     cancel: '取消',
     showChart: '显示图表',
     hideChart: '隐藏图表',
@@ -130,7 +130,7 @@ const TRANSLATIONS = {
     selectCharts: 'Select Charts',
     selectAll: 'Select All',
     print: 'Print',
-    saveImage: 'Save Image',
+    saveImage: 'Save Full Report',
     cancel: 'Cancel',
     showChart: 'Show Chart',
     hideChart: 'Hide Chart',
@@ -269,6 +269,7 @@ const App: React.FC = () => {
   const [exportSelection, setExportSelection] = useState({ vibration: true, fft: true, kinematics: true });
   const [isFFTVisible, setIsFFTVisible] = useState(true); // Visibility toggle for FFT Chart
   const chartsContainerRef = useRef<HTMLDivElement>(null);
+  const exportContainerRef = useRef<HTMLDivElement>(null);
 
   // --- DATA PIPELINE ---
   const handleFileLoad = (processed: ProcessedDataPoint[], name: string) => {
@@ -549,18 +550,19 @@ const App: React.FC = () => {
   };
 
   const handleSaveImage = async () => {
-    if (!chartsContainerRef.current || !(window as any).html2canvas) return;
+    // Target the hidden export container specifically
+    if (!exportContainerRef.current || !(window as any).html2canvas) return;
     
     setShowExportModal(false);
     try {
-      const canvas = await (window as any).html2canvas(chartsContainerRef.current, {
+      const canvas = await (window as any).html2canvas(exportContainerRef.current, {
         backgroundColor: theme.bgApp.includes('950') ? '#030712' : (theme.id === 'engineering' ? '#fefce8' : '#ffffff'),
         scale: 2 
       });
       const data = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.href = data;
-      link.download = `${fileName}_analysis.png`;
+      link.download = `${fileName}_full_report.png`;
       link.click();
     } catch (e) {
       console.error("Image generation failed", e);
@@ -653,13 +655,16 @@ const App: React.FC = () => {
           <div className={`${theme.bgPanel} border ${theme.border} rounded-xl shadow-2xl p-6 w-80`}>
             <h3 className="text-lg font-bold mb-4">{t.exportTitle}</h3>
             <div className="space-y-3 mb-6">
+               <div className="text-xs text-gray-500 italic mb-2">
+                 * {lang === 'zh' ? '保存图片将导出包含所有轴、频谱和运动学的完整报告。' : 'Save Image will export a full report containing all axes, FFT, and kinematics.'}
+               </div>
                <label className="flex items-center gap-2 cursor-pointer">
                  <input 
                    type="checkbox" 
                    checked={exportSelection.vibration} 
                    onChange={e => setExportSelection({...exportSelection, vibration: e.target.checked})}
                  />
-                 <span className="text-sm">{t.vibration}</span>
+                 <span className="text-sm">{t.vibration} (Screen)</span>
                </label>
                <label className="flex items-center gap-2 cursor-pointer">
                  <input 
@@ -667,7 +672,7 @@ const App: React.FC = () => {
                    checked={exportSelection.fft} 
                    onChange={e => setExportSelection({...exportSelection, fft: e.target.checked})}
                  />
-                 <span className="text-sm">{t.fft}</span>
+                 <span className="text-sm">{t.fft} (Screen)</span>
                </label>
                <label className="flex items-center gap-2 cursor-pointer">
                  <input 
@@ -675,7 +680,7 @@ const App: React.FC = () => {
                    checked={exportSelection.kinematics} 
                    onChange={e => setExportSelection({...exportSelection, kinematics: e.target.checked})}
                  />
-                 <span className="text-sm">{t.kinematics}</span>
+                 <span className="text-sm">{t.kinematics} (Screen)</span>
                </label>
             </div>
             <div className="space-y-2">
@@ -1349,6 +1354,193 @@ const App: React.FC = () => {
             )}
 
         </div>
+
+      {/* --- HIDDEN EXPORT CONTAINER --- */}
+      <div 
+        ref={exportContainerRef} 
+        className={`fixed top-0 left-0 -z-50 pointer-events-none ${theme.bgApp} ${theme.textPrimary}`}
+        style={{ width: '1200px', left: '-9999px' }} 
+      >
+        <div className="p-8 space-y-8">
+           <div className="border-b border-gray-700 pb-4 mb-8">
+              <h1 className="text-3xl font-bold">Vibration Analysis Report</h1>
+              <p className="text-xl opacity-70 mt-2">{fileName}</p>
+              <p className="text-sm opacity-50 mt-1">{new Date().toLocaleString()}</p>
+           </div>
+           
+           {/* Vibration Axes */}
+           {['ax', 'ay', 'az'].map((axis) => {
+             // Calculate on-the-fly statistics for export to ensure we have Total (t0-t3) for all axes
+             let stats: { constVel?: AnalysisStats, global?: AnalysisStats } = {};
+             
+             // Get standard stats if available
+             if (isoStats) {
+               if (axis === 'ax') stats.constVel = isoStats.x.constVel;
+               if (axis === 'ay') stats.constVel = isoStats.y.constVel;
+               if (axis === 'az') stats.constVel = isoStats.z.constVel;
+             }
+
+             // Manually calculate Global stats (t0-t3) for all axes if boundaries exist
+             if (finalProcessedData && boundaries && boundaries.isValid) {
+                // We use calculateStats from mathUtils
+                const globalRaw = calculateStats(finalProcessedData, axis as DataAxis, boundaries.t0, boundaries.t3);
+                stats.global = globalRaw;
+             } else if (isoStats && axis === 'az') {
+                stats.global = isoStats.z.global; // Fallback to existing z global
+             }
+
+             return (
+              <div key={axis} className="h-[420px] border border-gray-700/50 rounded-xl p-4 bg-black/5 flex flex-col">
+                 <h3 className="text-lg font-bold mb-2 uppercase flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-sm" style={{backgroundColor: theme.chartColors[axis as DataAxis]}}></span>
+                    Vibration {axis.toUpperCase()}
+                 </h3>
+                 
+                 {/* Detailed Stats Grid for Export */}
+                 <div className="grid grid-cols-5 gap-4 mb-4 text-xs">
+                    {/* Const Vel Group */}
+                    {stats.constVel && (
+                      <>
+                        <div className="flex flex-col border-l-2 border-blue-500 pl-2">
+                           <span className="opacity-60 font-bold mb-1">恒速区 (t1-t2)</span>
+                        </div>
+                        <div className="flex flex-col">
+                           <span className="opacity-50">A95 峰峰值</span>
+                           <span className="font-mono text-sm font-bold">{stats.constVel.a95.toFixed(3)}</span>
+                        </div>
+                        <div className="flex flex-col">
+                           <span className="opacity-50">Max Pk-Pk</span>
+                           <span className="font-mono text-sm font-bold">{stats.constVel.pkPk.toFixed(3)}</span>
+                        </div>
+                        <div className="flex flex-col">
+                           <span className="opacity-50">Max 0-Pk</span>
+                           <span className="font-mono text-sm font-bold">{stats.constVel.zeroPk.toFixed(3)}</span>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Global Group */}
+                    {stats.global ? (
+                       <div className="flex flex-col border-l border-gray-700 pl-2">
+                           <span className="opacity-60 font-bold mb-1">全过程 (t0-t3)</span>
+                           <div className="flex gap-4">
+                             <div className="flex flex-col">
+                               <span className="opacity-50">Max Pk-Pk</span>
+                               <span className="text-sm font-mono font-bold text-yellow-500">{stats.global.pkPk.toFixed(3)}</span>
+                             </div>
+                             <div className="flex flex-col">
+                               <span className="opacity-50">Max 0-Pk</span>
+                               <span className="text-sm font-mono font-bold">{stats.global.zeroPk.toFixed(3)}</span>
+                             </div>
+                           </div>
+                       </div>
+                    ) : (
+                      <div className="opacity-20 italic flex items-center">Global stats n/a</div>
+                    )}
+                 </div>
+
+                 <div className="flex-1 min-h-0">
+                    <TimeChart 
+                       data={displayData} 
+                       axis={axis as DataAxis}
+                       color={theme.chartColors[axis as DataAxis]}
+                       // Pass global stats for dot rendering if it's Z axis or generally applicable
+                       globalStats={
+                         axis === 'az' ? { ...stats.constVel!, pkPk: stats.global?.pkPk || 0, maxPkPkPair: stats.global?.maxPkPkPair } : stats.constVel
+                       }
+                       windowRange={{ start: windowStart, end: windowStart + windowSize }}
+                       verticalLines={isoVerticalLines}
+                       highlightAreas={isoHighlightAreas}
+                       gridColor={theme.gridColor}
+                       textColor={theme.textColorHex}
+                    />
+                 </div>
+              </div>
+            );
+           })}
+
+           {/* FFT (Current Axis) */}
+           <div className="h-[380px] border border-gray-700/50 rounded-xl p-4 bg-black/5 flex flex-col">
+               <h3 className="text-lg font-bold mb-4 uppercase flex items-center gap-2">
+                  Window Analysis ({accelAxis.toUpperCase()})
+               </h3>
+               
+               {/* Window Stats Display for Export */}
+               {windowStats && peakFreq && (
+                 <div className="grid grid-cols-4 gap-4 mb-4 text-xs border-b border-gray-800 pb-4">
+                    <div className="flex flex-col">
+                       <span className="opacity-50">Window RMS</span>
+                       <span className="font-mono text-lg font-bold">{windowStats.rms.toFixed(3)}</span>
+                    </div>
+                    <div className="flex flex-col">
+                       <span className="opacity-50">Window Peak</span>
+                       <span className="font-mono text-lg font-bold">{windowStats.peakVal.toFixed(3)}</span>
+                    </div>
+                    <div className="flex flex-col">
+                       <span className="opacity-50">Dominant Freq</span>
+                       <span className="font-mono text-lg font-bold text-purple-400">{peakFreq.freq.toFixed(2)} Hz</span>
+                    </div>
+                    <div className="flex flex-col">
+                       <span className="opacity-50">Magnitude</span>
+                       <span className="font-mono text-lg font-bold">{peakFreq.mag.toFixed(4)}</span>
+                    </div>
+                 </div>
+               )}
+
+               <div className="flex-1 min-h-0">
+                   <FFTChart 
+                      data={fftData} 
+                      color={theme.chartColors[accelAxis]}
+                      gridColor={theme.gridColor}
+                      textColor={theme.textColorHex}
+                   />
+               </div>
+           </div>
+
+           {/* Kinematics */}
+           {['vz', 'sz'].map((axis) => {
+              // Calculate specific values for export
+              let headerInfo = "";
+              if (axis === 'vz' && boundaries && boundaries.isValid) {
+                 // Calculate average speed during t1-t2
+                 const segment = displayData.filter(d => d.time >= boundaries.t1 && d.time <= boundaries.t2);
+                 if (segment.length > 0) {
+                   const avgSpeed = segment.reduce((acc, curr) => acc + Math.abs(curr.vz), 0) / segment.length;
+                   headerInfo = `- Rated Speed (avg t1-t2): ${avgSpeed.toFixed(3)} m/s`;
+                 }
+              } else if (axis === 'sz') {
+                 // Find max displacement (approx travel distance)
+                 let maxDisp = 0;
+                 for(let i=0; i<displayData.length; i++) {
+                   if (Math.abs(displayData[i].sz) > maxDisp) maxDisp = Math.abs(displayData[i].sz);
+                 }
+                 headerInfo = `- Total Travel: ${maxDisp.toFixed(3)} m`;
+              }
+
+              return (
+                <div key={axis} className="h-80 border border-gray-700/50 rounded-xl p-4 bg-black/5 flex flex-col">
+                   <h3 className="text-lg font-bold mb-2 uppercase flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-sm" style={{backgroundColor: theme.chartColors[axis as DataAxis]}}></span>
+                      {axis === 'vz' ? 'Velocity (Vz)' : 'Displacement (Sz)'}
+                      <span className="ml-2 font-mono text-sm opacity-70 text-gray-300">{headerInfo}</span>
+                   </h3>
+                   <div className="flex-1 min-h-0">
+                      <TimeChart 
+                         data={displayData} 
+                         axis={axis as DataAxis}
+                         color={theme.chartColors[axis as DataAxis]}
+                         verticalLines={isoVerticalLines}
+                         highlightAreas={isoHighlightAreas}
+                         gridColor={theme.gridColor}
+                         textColor={theme.textColorHex}
+                      />
+                   </div>
+                </div>
+              );
+           })}
+        </div>
+      </div>
+
       </main>
     </div>
   );
