@@ -26,13 +26,26 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
         <div className="absolute -inset-1 bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="relative px-8 py-16 bg-gray-900 ring-1 ring-gray-800 rounded-lg leading-none flex flex-col items-center justify-center space-y-4"
+          className="relative px-12 py-16 bg-gray-900 ring-1 ring-gray-800 rounded-lg leading-none flex flex-col items-center justify-center space-y-6"
         >
-          <svg className="w-16 h-16 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-          <span className="text-xl text-gray-100 font-bold">Upload Vibration Data</span>
-          <span className="text-sm text-gray-400">Supports .csv (ax, ay, az)</span>
+          {/* Logo Image Section */}
+          <div className="relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-blue-500 rounded-full blur opacity-30"></div>
+            <img 
+              src="/logo.png" 
+              onError={(e) => {
+                e.currentTarget.src = "https://api.dicebear.com/9.x/avataaars/svg?seed=MESE";
+                e.currentTarget.onerror = null;
+              }}
+              alt="Upload Logo" 
+              className="relative w-24 h-24 rounded-full border-2 border-gray-700 bg-gray-800 object-contain p-2 shadow-2xl"
+            />
+          </div>
+
+          <div className="flex flex-col items-center space-y-2">
+            <span className="text-xl text-gray-100 font-bold tracking-tight">Upload Vibration Data</span>
+            <span className="text-sm text-gray-400 font-mono">Supports .csv (ax, ay, az)</span>
+          </div>
         </button>
       </div>
       <input
@@ -43,9 +56,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
         className="hidden"
       />
       
-      <div className="mt-8 max-w-md text-center text-gray-500 text-sm">
+      <div className="mt-8 max-w-md text-center text-gray-500 text-sm font-mono">
         <p>Drag & Drop or Click to Upload.</p>
-        <p className="mt-2">The system will automatically calculate Velocity (Vz) and Displacement (Sz) via integration.</p>
+        <p className="mt-2 text-gray-600">The system will automatically calculate Velocity (Vz) and Displacement (Sz) via integration.</p>
       </div>
     </div>
   );
